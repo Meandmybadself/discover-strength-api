@@ -1,0 +1,30 @@
+{
+  "name": "discover-strength-api",
+  "version": "0.1.0",
+  "description": "Reverse-engineered TypeScript client for the Discover Strength (api-fit-mbo.axl3.io) mobile API",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "discover-strength",
+    "mindbody",
+    "fitness",
+    "api-client"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0"
+  }
+}
