@@ -136,6 +136,7 @@ are JSON re-encoded as base64; the client decodes transparently.
 | [`availableTimes(opts)`](#availabletimesopts)                    | `/appointment/v2/availabletimes`        |
 | [`prebook(opts)`](#prebookopts)                                  | `/appointment/prebook`                  |
 | [`book(opts)`](#bookopts)                                        | `/appointment/book`                     |
+| [`cancelAppointment(opts)`](#cancelappointmentopts)              | `/appointment/cancel`                   |
 
 ---
 
@@ -289,6 +290,22 @@ const booked = await client.book({
   endDateTime: '2026-05-25 10:00:00',
   appointmentDescription: 'Group',  // optional, default
   notes: '',                        // optional, default
+});
+```
+
+### `cancelAppointment(opts)`
+
+Cancels a booked appointment.
+
+- **Body:** `{ Appointment: { AppointmentID, ClientID }, User }`
+- **Returns:** `{ code, message }` — `code: 200` / `message: "Success"` on
+  success. The `AppointmentID` is the one returned by `book()` (it also
+  appears as `VisitRefNo` on `userClasses()` rows).
+
+```ts
+await client.cancelAppointment({
+  appointmentId: '389826',
+  clientId: '100946',
 });
 ```
 

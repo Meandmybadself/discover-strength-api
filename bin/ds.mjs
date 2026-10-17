@@ -12,6 +12,7 @@
 //          [--session Group]
 //          [--location <ClientID-LocationID>]
 //   prebook --start <...> [--session Group] [--location <...>]
+//   cancel --appointment <AppointmentID> [--client <ClientID>]
 //
 // Auth is loaded from the project's .env. The CLI updates .env on session
 // rotation so the next invocation stays fresh.
@@ -58,6 +59,18 @@ function flag(name) {
   return undefined;
 }
 
+const DEFAULT_SESSION = 'Group Training';
+
+// availabletimes returns {code: 605, message: "No results found"} instead of
+// an AvailableTimes array when nothing matches.
+function availableBlocks(t) {
+  if (t && t.code === 605) return [];
+  if (!Array.isArray(t?.AvailableTimes)) {
+    throw new Error(`Unexpected availabletimes response: ${JSON.stringify(t).slice(0, 200)}`);
+  }
+  return t.AvailableTimes;
+}
+
 function parseLocation(spec = HOME_LOCATION) {
   const [ClientID, LocationID] = spec.split('-');
   if (!ClientID || !LocationID) throw new Error(`Invalid location: ${spec}`);
@@ -81,7 +94,7 @@ async function lookupSessionTypeId(location, sessionName) {
 
 async function findBlock({ date, start, sessionName, location }) {
   const times = await client.availableTimes({ date, locations: location, sessionName });
-  for (const block of times.AvailableTimes) {
+  for (const block of availableBlocks(times)) {
     for (const slot of block.SessionTimes) {
       if (slot.Start === start) {
         return {
@@ -133,11 +146,11 @@ async function cmdUpcoming() {
 
 async function cmdSlots(date) {
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) fail('Usage: ds slots <YYYY-MM-DD>');
-  const sessionName = flag('session') ?? 'Group';
+  const sessionName = flag('session') ?? DEFAULT_SESSION;
   const location = parseLocation(flag('location'));
   const t = await client.availableTimes({ date, locations: location, sessionName });
   let any = false;
-  for (const block of t.AvailableTimes) {
+  for (const block of availableBlocks(t)) {
     if (block.SessionTimes.length === 0) continue;
     any = true;
     const coach = coachName(t.Coaches, block.CoachID);
@@ -151,7 +164,7 @@ async function cmdSlots(date) {
 async function cmdPrebook() {
   const start = flag('start');
   if (!start) fail('Usage: ds prebook --start "YYYY-MM-DD HH:MM:SS"');
-  const sessionName = flag('session') ?? 'Group';
+  const sessionName = flag('session') ?? DEFAULT_SESSION;
   const location = parseLocation(flag('location'));
   const date = start.slice(0, 10);
   const block = await findBlock({ date, start, sessionName, location });
@@ -170,8 +183,8 @@ async function cmdPrebook() {
 
 async function cmdBook() {
   const start = flag('start');
-  if (!start) fail('Usage: ds book --start "YYYY-MM-DD HH:MM:SS" [--coach <id>] [--session Group]');
-  const sessionName = flag('session') ?? 'Group';
+  if (!start) fail('Usage: ds book --start "YYYY-MM-DD HH:MM:SS" [--coach <id>] [--session "Group Training"]');
+  const sessionName = flag('session') ?? DEFAULT_SESSION;
   const location = parseLocation(flag('location'));
   const wantCoach = flag('coach');
   const date = start.slice(0, 10);
@@ -179,7 +192,7 @@ async function cmdBook() {
   // Find the slot.
   const times = await client.availableTimes({ date, locations: location, sessionName });
   let chosen = null;
-  for (const block of times.AvailableTimes) {
+  for (const block of availableBlocks(times)) {
     if (wantCoach && String(block.CoachID) !== String(wantCoach)) continue;
     for (const slot of block.SessionTimes) {
       if (slot.Start === start) {
@@ -222,6 +235,18 @@ async function cmdBook() {
   console.log(`OK — AppointmentID=${result.AppointmentID} status=${result.Status}`);
 }
 
+async function cmdCancel() {
+  const appointmentId = flag('appointment');
+  if (!appointmentId) fail('Usage: ds cancel --appointment <AppointmentID> [--client <ClientID>]');
+  const clientId = flag('client') ?? USER.ClientID;
+  const res = await client.cancelAppointment({ appointmentId, clientId });
+  if (res.code === 200) {
+    console.log(`OK — appointment ${appointmentId} cancelled (${res.message})`);
+  } else {
+    fail(`Cancel failed: code=${res.code} message=${res.message}`);
+  }
+}
+
 // ---------- dispatch ----------
 
 try {
@@ -231,8 +256,9 @@ try {
     case 'slots':    await cmdSlots(argv[1]); break;
     case 'prebook':  await cmdPrebook(); break;
     case 'book':     await cmdBook(); break;
+    case 'cancel':   await cmdCancel(); break;
     default:
-      console.error('Usage: ds <status|upcoming|slots|prebook|book> [...]');
+      console.error('Usage: ds <status|upcoming|slots|prebook|book|cancel> [...]');
       process.exit(1);
   }
 } catch (err) {

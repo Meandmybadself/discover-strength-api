@@ -295,6 +295,19 @@ export interface BookResponse {
   bringPlusOneAvailable: boolean;
 }
 
+export interface CancelAppointmentRequest {
+  Appointment: {
+    AppointmentID: string;
+    ClientID: string;
+  };
+  User: UserRef;
+}
+
+export interface CancelAppointmentResponse {
+  code: number;
+  message: string; // "Success"
+}
+
 export interface ClassFiltersResponse {
   Locations: Location[];
 }

@@ -5,6 +5,8 @@ import type {
   AvailableTimesResponse,
   BookRequest,
   BookResponse,
+  CancelAppointmentRequest,
+  CancelAppointmentResponse,
   ClassFiltersResponse,
   ContentGetRequest,
   ContentGetResponse,
@@ -246,6 +248,22 @@ export class DiscoverStrengthClient {
       User: this.requireUser(opts.user),
     };
     return this.post<BookResponse>('/appointment/book', body);
+  }
+
+  /** POST /appointment/cancel — cancels a booked appointment by its AppointmentID. */
+  cancelAppointment(opts: {
+    appointmentId: string;
+    clientId: string;
+    user?: UserRef;
+  }): Promise<CancelAppointmentResponse> {
+    const body: CancelAppointmentRequest = {
+      Appointment: {
+        AppointmentID: opts.appointmentId,
+        ClientID: opts.clientId,
+      },
+      User: this.requireUser(opts.user),
+    };
+    return this.post<CancelAppointmentResponse>('/appointment/cancel', body);
   }
 
   // ---------- Internals ----------
